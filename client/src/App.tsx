@@ -55,7 +55,9 @@ function App() {
   const [lastFailedQuestion, setLastFailedQuestion] = useState<string | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isUserScrolledUp = useRef(false);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -72,10 +74,22 @@ function App() {
     localStorage.setItem(LAST_SUBJECT_KEY, newSubject);
   };
 
-  // Auto-scroll to bottom when messages change
+  // Smart auto-scroll: only scroll to bottom if user hasn't scrolled up
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!isUserScrolledUp.current) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, isLoading]);
+
+  // Track whether user has scrolled away from the bottom
+  const handleScroll = () => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const threshold = 100; // px from bottom
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    isUserScrolledUp.current = distanceFromBottom > threshold;
+  };
 
   // Focus input on mount
   useEffect(() => {
@@ -203,7 +217,11 @@ function App() {
       </header>
 
       {/* Chat Messages Area */}
-      <main className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <main
+        ref={chatContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+      >
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
             <span className="text-5xl">🎓</span>
