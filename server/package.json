@@ -1,7 +1,7 @@
 {
-  "name": "ai-study-buddy-server",
+  "name": "quickdoubt-server",
   "version": "1.0.0",
-  "description": "Backend server for AI Study Buddy - an educational chatbot",
+  "description": "Backend server for QuickDoubt - an AI-powered educational chatbot",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

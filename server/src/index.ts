@@ -99,5 +99,5 @@ app.get("/api/health", (_req: Request, res: Response) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📚 AI Study Buddy backend ready`);
+  console.log(`⚡ QuickDoubt backend ready`);
 });

@@ -106,8 +106,8 @@ function App() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700 shrink-0">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">📚</span>
-          <h1 className="text-xl font-bold text-white">AI Study Buddy</h1>
+          <span className="text-2xl">⚡</span>
+          <h1 className="text-xl font-bold text-white">QuickDoubt</h1>
         </div>
 
         {/* Subject Selector */}
@@ -135,7 +135,7 @@ function App() {
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
             <span className="text-5xl">🎓</span>
-            <p className="text-lg font-medium">Welcome to AI Study Buddy!</p>
+            <p className="text-lg font-medium">Welcome to QuickDoubt!</p>
             <p className="text-sm text-center max-w-md">
               Select a subject above and ask any question. I'll explain it
               step-by-step like a patient tutor.
