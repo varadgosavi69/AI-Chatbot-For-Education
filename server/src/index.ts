@@ -74,6 +74,11 @@ function extractText(responseContent: Anthropic.ContentBlock[]): string {
   );
 }
 
+function stripMarkdownFences(raw: string): string {
+  // Remove ```json ... ``` or ``` ... ``` wrappers if present
+  return raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+}
+
 // ─── POST /api/ask ───────────────────────────────────────────────────────────
 
 app.post("/api/ask", async (req: Request, res: Response): Promise<void> => {
@@ -192,6 +197,95 @@ app.post("/api/notes/explain", async (req: Request, res: Response): Promise<void
       return;
     }
     res.status(500).json({ error: "Failed to generate explanation." });
+  }
+});
+
+// ─── POST /api/notes/visualize ───────────────────────────────────────────────
+// Returns structured JSON for mindmap, flowchart, table, pieChart.
+
+const VISUALIZE_SYSTEM = `You are a data structuring assistant. 
+Your output must be ONLY valid JSON — no markdown, no preamble, no explanation, no code fences.
+Return a JSON object matching this exact shape:
+{
+  "mindmap": { "root": "<topic>", "children": [{ "label": "<text>", "children": [{ "label": "<text>", "children": [] }] }] },
+  "flowchart": { "steps": [{ "id": "<unique_id>", "label": "<text>", "next": ["<id>"] }] },
+  "table": { "headers": ["<col1>", "<col2>"], "rows": [["<val>", "<val>"]] },
+  "pieChart": { "title": "<title>", "segments": [{ "label": "<text>", "value": <number> }] }
+}
+All four keys are required. Do not add extra keys.`;
+
+async function callVisualize(text: string): Promise<string> {
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-5-20250514",
+    max_tokens: 3000,
+    system: VISUALIZE_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: `Extract visual structure from these notes. Return ONLY valid JSON:\n\n${text.slice(0, 10000)}`,
+      },
+    ],
+  });
+  return extractText(response.content);
+}
+
+app.post("/api/notes/visualize", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { text } = req.body as { text: string };
+
+    if (!text || text.trim().length < 10) {
+      res.status(400).json({ error: "text is required and must be non-empty." });
+      return;
+    }
+
+    let raw = await callVisualize(text);
+    raw = stripMarkdownFences(raw);
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      // Retry once with stricter prompt
+      console.warn("Visualize: first attempt returned invalid JSON, retrying…");
+      const retry = await anthropic.messages.create({
+        model: "claude-sonnet-4-5-20250514",
+        max_tokens: 3000,
+        system: VISUALIZE_SYSTEM + "\n\nCRITICAL: Return ONLY the raw JSON object. Nothing else.",
+        messages: [
+          {
+            role: "user",
+            content: `The following notes need to be structured into a JSON object. Output ONLY the JSON:\n\n${text.slice(0, 8000)}`,
+          },
+        ],
+      });
+      const retryRaw = stripMarkdownFences(extractText(retry.content));
+      try {
+        parsed = JSON.parse(retryRaw);
+      } catch {
+        res.status(502).json({
+          error: "Could not generate valid visual data. Please try again with different notes.",
+        });
+        return;
+      }
+    }
+
+    // Basic shape validation
+    const data = parsed as Record<string, unknown>;
+    if (!data.mindmap || !data.flowchart || !data.table || !data.pieChart) {
+      res.status(502).json({
+        error: "Visual data was incomplete. Please try again.",
+      });
+      return;
+    }
+
+    res.json(parsed);
+  } catch (error: unknown) {
+    console.error("Visualize error:", error);
+    if (error instanceof Anthropic.APIError) {
+      res.status(error.status || 500).json({ error: `Claude API error: ${error.message}` });
+      return;
+    }
+    res.status(500).json({ error: "Failed to generate visual data." });
   }
 });
 
