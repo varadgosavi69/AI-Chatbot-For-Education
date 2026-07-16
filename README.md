@@ -55,6 +55,8 @@ cp .env.example .env
 
 Then edit `server/.env` and set your Anthropic API key.
 
+> In production, set `VITE_API_BASE_URL` on the frontend host (Vercel) and `FRONTEND_URL` on the backend host (Render). The frontend should point to the deployed Render backend URL, and the backend should allow the deployed Vercel URL.
+
 ### 4. Run the backend
 
 ```bash
