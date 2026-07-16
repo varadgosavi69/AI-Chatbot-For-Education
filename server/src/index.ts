@@ -11,11 +11,13 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const frontendUrl = process.env.FRONTEND_URL?.trim();
+const allowedOrigins = [frontendUrl, "http://localhost:5173", "http://127.0.0.1:5173"].filter(Boolean);
 
-// Middleware — explicitly allow the Vite dev server origin
+// Middleware — allow localhost dev origins and a deployed frontend URL if configured
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   })
