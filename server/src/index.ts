@@ -150,6 +150,51 @@ app.post(
   }
 );
 
+// ─── POST /api/notes/explain ─────────────────────────────────────────────────
+// Takes extracted text + subject, returns a markdown explanation from Claude.
+
+app.post("/api/notes/explain", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { text, subject } = req.body as { text: string; subject?: string };
+
+    if (!text || text.trim().length < 10) {
+      res.status(400).json({ error: "text is required and must be non-empty." });
+      return;
+    }
+
+    const subjectLabel = subject || "the subject";
+    const systemPrompt =
+      "Explain the following notes in simple, clear language for a student. " +
+      "Break down complex concepts. Keep it well-structured with headings. " +
+      "Use markdown formatting (##, ###, bullet points, bold) to make it easy to read.";
+
+    const userMessage =
+      `Subject: ${subjectLabel}\n\nNotes to explain:\n\n${text.slice(0, 12000)}`;
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-5-20250514",
+      max_tokens: 3000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    });
+
+    const explanation = extractText(response.content);
+    if (!explanation) {
+      res.status(500).json({ error: "Claude returned an empty explanation." });
+      return;
+    }
+
+    res.json({ explanation });
+  } catch (error: unknown) {
+    console.error("Explain error:", error);
+    if (error instanceof Anthropic.APIError) {
+      res.status(error.status || 500).json({ error: `Claude API error: ${error.message}` });
+      return;
+    }
+    res.status(500).json({ error: "Failed to generate explanation." });
+  }
+});
+
 // ─── Health check ────────────────────────────────────────────────────────────
 
 app.get("/api/health", (_req: Request, res: Response) => {
