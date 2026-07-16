@@ -292,6 +292,12 @@ app.post("/api/notes/visualize", async (req: Request, res: Response): Promise<vo
   }
 });
 
+// ─── Root route ─────────────────────────────────────────────────────────────
+
+app.get("/", (_req: Request, res: Response) => {
+  res.json({ status: "QuickDoubt backend is running" });
+});
+
 // ─── Health check ────────────────────────────────────────────────────────────
 
 app.get("/api/health", (_req: Request, res: Response) => {
