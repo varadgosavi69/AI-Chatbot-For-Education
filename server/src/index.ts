@@ -2,6 +2,10 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import Anthropic from "@anthropic-ai/sdk";
 import dotenv from "dotenv";
+import multer from "multer";
+// pdf-parse ships CJS; esModuleInterop handles the default import
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string; numpages: number }>;
 
 dotenv.config();
 
@@ -30,6 +34,19 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// Multer — store upload in memory (no disk writes)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB max
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF files are accepted"));
+    }
+  },
+});
+
 // Types
 interface HistoryMessage {
   role: "user" | "assistant";
@@ -42,23 +59,32 @@ interface AskRequestBody {
   history: HistoryMessage[];
 }
 
-// System prompt builder
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function buildSystemPrompt(subject: string): string {
   return `You are an expert, patient tutor for ${subject}. Explain clearly, step-by-step, at a student's level. Use simple examples. Keep answers concise but complete.`;
 }
 
-// POST /api/ask
+function extractText(responseContent: Anthropic.ContentBlock[]): string {
+  return (
+    responseContent
+      .filter((b) => b.type === "text")
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("") || ""
+  );
+}
+
+// ─── POST /api/ask ───────────────────────────────────────────────────────────
+
 app.post("/api/ask", async (req: Request, res: Response): Promise<void> => {
   try {
     const { subject, question, history } = req.body as AskRequestBody;
 
-    // Validation
     if (!subject || !question) {
       res.status(400).json({ error: "subject and question are required" });
       return;
     }
 
-    // Build messages array: previous history + new user question
     const messages: Anthropic.MessageParam[] = [
       ...(history || []).map((msg) => ({
         role: msg.role as "user" | "assistant",
@@ -67,7 +93,6 @@ app.post("/api/ask", async (req: Request, res: Response): Promise<void> => {
       { role: "user" as const, content: question },
     ];
 
-    // Call Claude API
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250514",
       max_tokens: 2048,
@@ -75,32 +100,58 @@ app.post("/api/ask", async (req: Request, res: Response): Promise<void> => {
       messages,
     });
 
-    // Extract text from the response
     const answer =
-      response.content
-        .filter((block) => block.type === "text")
-        .map((block) => {
-          if (block.type === "text") return block.text;
-          return "";
-        })
-        .join("") || "Sorry, I could not generate a response.";
+      extractText(response.content) || "Sorry, I could not generate a response.";
 
     res.json({ answer });
   } catch (error: unknown) {
     console.error("Error calling Claude API:", error);
-
     if (error instanceof Anthropic.APIError) {
-      res.status(error.status || 500).json({
-        error: `Claude API error: ${error.message}`,
-      });
+      res.status(error.status || 500).json({ error: `Claude API error: ${error.message}` });
       return;
     }
-
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Health check
+// ─── POST /api/notes/upload ──────────────────────────────────────────────────
+// Accepts a PDF file, extracts raw text, and returns it to the frontend.
+
+app.post(
+  "/api/notes/upload",
+  upload.single("file"),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: "No file uploaded. Please attach a PDF." });
+        return;
+      }
+
+      const parsed = await pdfParse(req.file.buffer);
+      const text = parsed.text.trim();
+
+      if (!text || text.length < 10) {
+        res.status(422).json({
+          error:
+            "No readable text was found in this PDF. It may be a scanned image — please use a text-based PDF.",
+        });
+        return;
+      }
+
+      res.json({ text, pages: parsed.numpages, charCount: text.length });
+    } catch (err: unknown) {
+      console.error("PDF parse error:", err);
+      if (err instanceof Error && err.message === "Only PDF files are accepted") {
+        res.status(400).json({ error: "Only PDF files are accepted. Please upload a .pdf file." });
+        return;
+      }
+      res.status(500).json({ error: "Failed to extract text from the PDF." });
+    }
+  }
+);
+
+// ─── Health check ────────────────────────────────────────────────────────────
+
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
