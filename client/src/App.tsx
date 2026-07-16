@@ -17,15 +17,60 @@ interface ChatMessage {
   isError?: boolean;
 }
 
+const STORAGE_PREFIX = "quickdoubt_chat_";
+const LAST_SUBJECT_KEY = "quickdoubt_last_subject";
+
+function getStorageKey(subjectName: string): string {
+  return `${STORAGE_PREFIX}${subjectName.toLowerCase().replace(/\s+/g, "_")}`;
+}
+
+function loadMessages(subjectName: string): ChatMessage[] {
+  try {
+    const stored = localStorage.getItem(getStorageKey(subjectName));
+    if (stored) {
+      return JSON.parse(stored) as ChatMessage[];
+    }
+  } catch {
+    // corrupted data — ignore
+  }
+  return [];
+}
+
+function saveMessages(subjectName: string, msgs: ChatMessage[]): void {
+  // Only save non-error messages
+  const toSave = msgs.filter((m) => !m.isError);
+  localStorage.setItem(getStorageKey(subjectName), JSON.stringify(toSave));
+}
+
 function App() {
-  const [subject, setSubject] = useState<string>(SUBJECTS[0]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [subject, setSubject] = useState<string>(() => {
+    const saved = localStorage.getItem(LAST_SUBJECT_KEY);
+    return saved && (SUBJECTS as readonly string[]).includes(saved)
+      ? saved
+      : SUBJECTS[0];
+  });
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(subject));
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [lastFailedQuestion, setLastFailedQuestion] = useState<string | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    saveMessages(subject, messages);
+  }, [messages, subject]);
+
+  // Load messages when subject changes + remember last subject
+  const handleSubjectChange = (newSubject: string) => {
+    // Save current messages before switching
+    saveMessages(subject, messages);
+    setSubject(newSubject);
+    setMessages(loadMessages(newSubject));
+    setLastFailedQuestion(null);
+    localStorage.setItem(LAST_SUBJECT_KEY, newSubject);
+  };
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -118,7 +163,7 @@ function App() {
           <select
             id="subject-select"
             value={subject}
-            onChange={(e) => setSubject(e.target.value)}
+            onChange={(e) => handleSubjectChange(e.target.value)}
             className="bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
           >
             {SUBJECTS.map((s) => (
