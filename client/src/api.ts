@@ -17,6 +17,20 @@ export interface AskError {
   error: string;
 }
 
+// ─── Notes types ─────────────────────────────────────────────────────────────
+
+export interface UploadResponse {
+  text: string;
+  pages: number;
+  charCount: number;
+}
+
+export interface ExplainResponse {
+  explanation: string;
+}
+
+// ─── Chat API ─────────────────────────────────────────────────────────────────
+
 const REQUEST_TIMEOUT_MS = 30_000;
 
 export async function askQuestion(request: AskRequest): Promise<string> {
@@ -50,4 +64,32 @@ export async function askQuestion(request: AskRequest): Promise<string> {
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+// ─── Notes API ────────────────────────────────────────────────────────────────
+
+export async function uploadPdf(file: File): Promise<UploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/notes/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json() as (UploadResponse & AskError);
+  if (!response.ok) throw new Error(data.error || `Upload failed (${response.status})`);
+  return data;
+}
+
+export async function explainNotes(text: string, subject: string): Promise<string> {
+  const response = await fetch("/api/notes/explain", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, subject }),
+  });
+
+  const data = await response.json() as (ExplainResponse & AskError);
+  if (!response.ok) throw new Error(data.error || `Explain failed (${response.status})`);
+  return data.explanation;
 }
