@@ -6,12 +6,21 @@ body {
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background-color: #0f172a;
   color: #e2e8f0;
+  -webkit-text-size-adjust: 100%;
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh; /* Use dynamic viewport height for mobile browsers */
   display: flex;
   flex-direction: column;
+}
+
+/* Prevent textarea zoom on iOS */
+@media (max-width: 640px) {
+  textarea, select, input {
+    font-size: 16px !important;
+  }
 }
 
 /* Markdown content styling inside AI messages */

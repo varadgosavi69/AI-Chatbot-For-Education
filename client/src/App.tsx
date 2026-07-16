@@ -227,22 +227,22 @@ function App() {
   return (
     <div className="flex flex-col h-screen bg-slate-900 overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3.5 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/60 shrink-0 z-10">
+      <header className="flex flex-wrap items-center justify-between px-3 sm:px-6 py-3 sm:py-3.5 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/60 shrink-0 z-10 gap-2">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl leading-none">⚡</span>
-          <h1 className="text-xl font-bold text-white tracking-tight">QuickDoubt</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">QuickDoubt</h1>
         </div>
 
         {/* Subject Selector + Clear */}
-        <div className="flex items-center gap-3">
-          <label htmlFor="subject-select" className="text-sm text-slate-400">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <label htmlFor="subject-select" className="hidden sm:inline text-sm text-slate-400">
             Subject:
           </label>
           <select
             id="subject-select"
             value={subject}
             onChange={(e) => handleSubjectChange(e.target.value)}
-            className={`bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 border border-slate-600 focus:outline-none focus:ring-2 ${theme.accentRing} cursor-pointer`}
+            className={`bg-slate-700 text-white text-sm rounded-lg px-2.5 sm:px-3 py-1.5 border border-slate-600 focus:outline-none focus:ring-2 ${theme.accentRing} cursor-pointer`}
           >
             {SUBJECTS.map((s) => (
               <option key={s} value={s}>
@@ -256,7 +256,7 @@ function App() {
             className="text-sm text-slate-400 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
             title="Clear chat history for this subject"
           >
-            🗑️ Clear
+            🗑️ <span className="hidden sm:inline">Clear</span>
           </button>
         </div>
       </header>
@@ -293,7 +293,7 @@ function App() {
             className={`flex message-bubble ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[85%] md:max-w-[72%] rounded-2xl px-4 py-3 shadow-md ${
+              className={`max-w-[90%] sm:max-w-[85%] md:max-w-[72%] rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 shadow-md ${
                 msg.role === "user"
                   ? `${theme.userBubble} text-white rounded-br-none ${theme.userShadow}`
                   : msg.isError
@@ -345,8 +345,8 @@ function App() {
       </main>
 
       {/* Input Area */}
-      <footer className="shrink-0 border-t border-slate-700/60 bg-slate-800/95 backdrop-blur-sm px-6 py-3.5">
-        <form onSubmit={handleSubmit} className="flex gap-3 items-end max-w-3xl mx-auto">
+      <footer className="shrink-0 border-t border-slate-700/60 bg-slate-800/95 backdrop-blur-sm px-3 sm:px-6 py-3 sm:py-3.5">
+        <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3 items-end max-w-3xl mx-auto">
           <textarea
             ref={inputRef}
             value={input}
@@ -355,12 +355,12 @@ function App() {
             placeholder={`Ask a ${subject} question...`}
             disabled={isLoading}
             rows={1}
-            className={`flex-1 bg-slate-700 text-white placeholder-slate-400 rounded-xl px-4 py-2.5 resize-none focus:outline-none focus:ring-2 ${theme.accentRing} border border-slate-600 disabled:opacity-50`}
+            className={`flex-1 bg-slate-700 text-white placeholder-slate-400 rounded-xl px-3 sm:px-4 py-2.5 resize-none focus:outline-none focus:ring-2 ${theme.accentRing} border border-slate-600 disabled:opacity-50 text-sm sm:text-base`}
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className={`${theme.accent} ${theme.accentHover} disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl px-5 py-2.5 font-medium transition-colors cursor-pointer`}
+            className={`${theme.accent} ${theme.accentHover} disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl px-4 sm:px-5 py-2.5 font-medium transition-colors cursor-pointer text-sm sm:text-base`}
           >
             {isLoading ? "..." : "Send"}
           </button>
