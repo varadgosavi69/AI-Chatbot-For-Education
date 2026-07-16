@@ -11,8 +11,9 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const frontendUrl = process.env.FRONTEND_URL?.trim();
-const allowedOrigins = [frontendUrl, "http://localhost:5173", "http://127.0.0.1:5173"].filter(Boolean);
+const allowedOrigins = [process.env.FRONTEND_URL, "http://localhost:5173", "http://127.0.0.1:5173"].filter(
+  (origin): origin is string => Boolean(origin)
+);
 
 // Middleware — allow localhost dev origins and a deployed frontend URL if configured
 app.use(
