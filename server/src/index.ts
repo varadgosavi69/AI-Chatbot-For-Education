@@ -8,13 +8,21 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// Middleware — explicitly allow the Vite dev server origin
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 app.use(express.json());
 
 // Validate API key on startup
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error("❌ ANTHROPIC_API_KEY is not set in .env file");
+const apiKey = process.env.ANTHROPIC_API_KEY || "";
+if (!apiKey || apiKey === "your_anthropic_api_key_here" || !apiKey.startsWith("sk-")) {
+  console.error("❌ ANTHROPIC_API_KEY is missing or still set to the placeholder value.");
+  console.error("   Set a real key in server/.env — it must start with 'sk-'.");
   process.exit(1);
 }
 
