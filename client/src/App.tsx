@@ -240,27 +240,28 @@ function App() {
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-3 ${
+              className={`max-w-[85%] md:max-w-[72%] rounded-2xl px-4 py-3 shadow-md ${
                 msg.role === "user"
-                  ? "bg-indigo-600 text-white rounded-br-sm"
+                  ? "bg-indigo-600 text-white rounded-br-none shadow-indigo-900/30"
                   : msg.isError
-                    ? "bg-red-900/50 text-red-200 border border-red-700 rounded-bl-sm"
-                    : "bg-slate-700 text-slate-100 rounded-bl-sm"
+                    ? "bg-red-950/60 text-red-200 border border-red-800/50 rounded-bl-none shadow-red-900/20"
+                    : "bg-slate-750 text-slate-100 rounded-bl-none border border-slate-600/30 shadow-slate-900/40"
               }`}
+              style={msg.role === "assistant" && !msg.isError ? { backgroundColor: '#293548' } : undefined}
             >
               {msg.role === "assistant" && !msg.isError ? (
                 <div className="markdown-content">
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
               ) : (
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
               )}
 
               {/* Retry button for error messages */}
               {msg.isError && lastFailedQuestion && (
                 <button
                   onClick={handleRetry}
-                  className="mt-2 text-sm text-red-300 hover:text-white underline cursor-pointer"
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm text-red-300 hover:text-white bg-red-900/40 hover:bg-red-800/50 px-3 py-1 rounded-lg transition-colors cursor-pointer"
                 >
                   🔄 Retry
                 </button>
@@ -272,11 +273,11 @@ function App() {
         {/* Loading indicator */}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-slate-700 rounded-2xl rounded-bl-sm px-4 py-3">
-              <div className="flex items-center gap-1.5">
-                <span className="typing-dot w-2 h-2 bg-slate-400 rounded-full inline-block" />
-                <span className="typing-dot w-2 h-2 bg-slate-400 rounded-full inline-block" />
-                <span className="typing-dot w-2 h-2 bg-slate-400 rounded-full inline-block" />
+            <div className="rounded-2xl rounded-bl-none px-5 py-4 shadow-md border border-slate-600/30" style={{ backgroundColor: '#293548' }}>
+              <div className="flex items-center gap-2">
+                <span className="typing-dot w-2.5 h-2.5 bg-slate-400 rounded-full inline-block" />
+                <span className="typing-dot w-2.5 h-2.5 bg-slate-400 rounded-full inline-block" />
+                <span className="typing-dot w-2.5 h-2.5 bg-slate-400 rounded-full inline-block" />
               </div>
             </div>
           </div>
