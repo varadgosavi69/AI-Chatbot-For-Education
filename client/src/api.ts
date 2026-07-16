@@ -44,13 +44,18 @@ export interface VisualizeResponse {
 // ─── Chat API ─────────────────────────────────────────────────────────────────
 
 const REQUEST_TIMEOUT_MS = 30_000;
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+
+function apiUrl(path: string): string {
+  return `${apiBaseUrl.replace(/\/$/, "")}${path}`;
+}
 
 export async function askQuestion(request: AskRequest): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch("/api/ask", {
+    const response = await fetch(apiUrl("/api/ask"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
@@ -84,7 +89,7 @@ export async function uploadPdf(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch("/api/notes/upload", {
+  const response = await fetch(apiUrl("/api/notes/upload"), {
     method: "POST",
     body: formData,
   });
@@ -95,7 +100,7 @@ export async function uploadPdf(file: File): Promise<UploadResponse> {
 }
 
 export async function explainNotes(text: string, subject: string): Promise<string> {
-  const response = await fetch("/api/notes/explain", {
+  const response = await fetch(apiUrl("/api/notes/explain"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, subject }),
@@ -107,7 +112,7 @@ export async function explainNotes(text: string, subject: string): Promise<strin
 }
 
 export async function visualizeNotes(text: string): Promise<VisualizeResponse> {
-  const response = await fetch("/api/notes/visualize", {
+  const response = await fetch(apiUrl("/api/notes/visualize"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
