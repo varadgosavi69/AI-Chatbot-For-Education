@@ -146,6 +146,18 @@ function App() {
     }
   };
 
+  const handleClearChat = () => {
+    if (messages.length === 0) return;
+    const confirmed = window.confirm(
+      `Clear all ${subject} chat history? This cannot be undone.`
+    );
+    if (confirmed) {
+      setMessages([]);
+      setLastFailedQuestion(null);
+      localStorage.removeItem(getStorageKey(subject));
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-900">
       {/* Header */}
@@ -155,8 +167,8 @@ function App() {
           <h1 className="text-xl font-bold text-white">QuickDoubt</h1>
         </div>
 
-        {/* Subject Selector */}
-        <div className="flex items-center gap-2">
+        {/* Subject Selector + Clear */}
+        <div className="flex items-center gap-3">
           <label htmlFor="subject-select" className="text-sm text-slate-400">
             Subject:
           </label>
@@ -172,6 +184,14 @@ function App() {
               </option>
             ))}
           </select>
+          <button
+            onClick={handleClearChat}
+            disabled={messages.length === 0}
+            className="text-sm text-slate-400 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            title="Clear chat history for this subject"
+          >
+            🗑️ Clear
+          </button>
         </div>
       </header>
 
