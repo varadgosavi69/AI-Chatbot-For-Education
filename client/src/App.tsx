@@ -17,6 +17,49 @@ interface ChatMessage {
   isError?: boolean;
 }
 
+interface SubjectTheme {
+  accent: string;
+  accentHover: string;
+  accentRing: string;
+  userBubble: string;
+  userShadow: string;
+  accentBorder: string;
+  emoji: string;
+}
+
+const SUBJECT_THEMES: Record<string, SubjectTheme> = {
+  "Math": {
+    accent: "bg-blue-600", accentHover: "hover:bg-blue-500", accentRing: "focus:ring-blue-500",
+    userBubble: "bg-blue-600", userShadow: "shadow-blue-900/30",
+    accentBorder: "#3b82f6", emoji: "📐",
+  },
+  "Physics": {
+    accent: "bg-violet-600", accentHover: "hover:bg-violet-500", accentRing: "focus:ring-violet-500",
+    userBubble: "bg-violet-600", userShadow: "shadow-violet-900/30",
+    accentBorder: "#8b5cf6", emoji: "⚛",
+  },
+  "Chemistry": {
+    accent: "bg-emerald-600", accentHover: "hover:bg-emerald-500", accentRing: "focus:ring-emerald-500",
+    userBubble: "bg-emerald-600", userShadow: "shadow-emerald-900/30",
+    accentBorder: "#10b981", emoji: "🧪",
+  },
+  "Computer Science": {
+    accent: "bg-amber-600", accentHover: "hover:bg-amber-500", accentRing: "focus:ring-amber-500",
+    userBubble: "bg-amber-600", userShadow: "shadow-amber-900/30",
+    accentBorder: "#f59e0b", emoji: "💻",
+  },
+  "Biology": {
+    accent: "bg-teal-600", accentHover: "hover:bg-teal-500", accentRing: "focus:ring-teal-500",
+    userBubble: "bg-teal-600", userShadow: "shadow-teal-900/30",
+    accentBorder: "#14b8a6", emoji: "🧬",
+  },
+  "General": {
+    accent: "bg-indigo-600", accentHover: "hover:bg-indigo-500", accentRing: "focus:ring-indigo-500",
+    userBubble: "bg-indigo-600", userShadow: "shadow-indigo-900/30",
+    accentBorder: "#6366f1", emoji: "💡",
+  },
+};
+
 const STORAGE_PREFIX = "quickdoubt_chat_";
 const LAST_SUBJECT_KEY = "quickdoubt_last_subject";
 
@@ -58,6 +101,8 @@ function App() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUp = useRef(false);
+
+  const theme = SUBJECT_THEMES[subject] || SUBJECT_THEMES["General"];
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -197,7 +242,7 @@ function App() {
             id="subject-select"
             value={subject}
             onChange={(e) => handleSubjectChange(e.target.value)}
-            className="bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            className={`bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 border border-slate-600 focus:outline-none focus:ring-2 ${theme.accentRing} cursor-pointer`}
           >
             {SUBJECTS.map((s) => (
               <option key={s} value={s}>
@@ -242,12 +287,16 @@ function App() {
             <div
               className={`max-w-[85%] md:max-w-[72%] rounded-2xl px-4 py-3 shadow-md ${
                 msg.role === "user"
-                  ? "bg-indigo-600 text-white rounded-br-none shadow-indigo-900/30"
+                  ? `${theme.userBubble} text-white rounded-br-none ${theme.userShadow}`
                   : msg.isError
                     ? "bg-red-950/60 text-red-200 border border-red-800/50 rounded-bl-none shadow-red-900/20"
-                    : "bg-slate-750 text-slate-100 rounded-bl-none border border-slate-600/30 shadow-slate-900/40"
+                    : "text-slate-100 rounded-bl-none border border-slate-600/30 shadow-slate-900/40"
               }`}
-              style={msg.role === "assistant" && !msg.isError ? { backgroundColor: '#293548' } : undefined}
+              style={
+                msg.role === "assistant" && !msg.isError
+                  ? { backgroundColor: '#293548', borderLeft: `3px solid ${theme.accentBorder}` }
+                  : undefined
+              }
             >
               {msg.role === "assistant" && !msg.isError ? (
                 <div className="markdown-content">
@@ -298,12 +347,12 @@ function App() {
             placeholder={`Ask a ${subject} question...`}
             disabled={isLoading}
             rows={1}
-            className="flex-1 bg-slate-700 text-white placeholder-slate-400 rounded-xl px-4 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-600 disabled:opacity-50"
+            className={`flex-1 bg-slate-700 text-white placeholder-slate-400 rounded-xl px-4 py-2.5 resize-none focus:outline-none focus:ring-2 ${theme.accentRing} border border-slate-600 disabled:opacity-50`}
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl px-5 py-2.5 font-medium transition-colors cursor-pointer"
+            className={`${theme.accent} ${theme.accentHover} disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl px-5 py-2.5 font-medium transition-colors cursor-pointer`}
           >
             {isLoading ? "..." : "Send"}
           </button>
