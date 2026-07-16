@@ -17,20 +17,37 @@ export interface AskError {
   error: string;
 }
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export async function askQuestion(request: AskRequest): Promise<string> {
-  const response = await fetch("/api/ask", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) {
-    const errorData = (await response.json().catch(() => null)) as AskError | null;
-    throw new Error(
-      errorData?.error || `Request failed with status ${response.status}`
-    );
+  try {
+    const response = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = (await response.json().catch(() => null)) as AskError | null;
+      throw new Error(
+        errorData?.error || `Request failed with status ${response.status}`
+      );
+    }
+
+    const data = (await response.json()) as AskResponse;
+    return data.answer;
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(
+        "Request timed out after 30 seconds. The server may be slow or unreachable. Please try again."
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = (await response.json()) as AskResponse;
-  return data.answer;
 }

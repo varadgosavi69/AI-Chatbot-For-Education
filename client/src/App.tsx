@@ -113,11 +113,18 @@ function App() {
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: unknown) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Something went wrong";
+      let errorMsg: string;
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        errorMsg =
+          "Could not reach the server. Make sure the backend is running on port 3001.";
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      } else {
+        errorMsg = "Something went wrong. Please try again.";
+      }
       const errorMessage: ChatMessage = {
         role: "assistant",
-        content: `⚠️ Error: ${errorMsg}`,
+        content: `⚠️ ${errorMsg}`,
         isError: true,
       };
       setMessages((prev) => [...prev, errorMessage]);
