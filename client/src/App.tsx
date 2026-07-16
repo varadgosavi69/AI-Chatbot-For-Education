@@ -269,13 +269,21 @@ function App() {
       >
         <div key={subject} className="max-w-3xl mx-auto space-y-4 chat-fade-in">
         {messages.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
-            <span className="text-5xl">🎓</span>
-            <p className="text-lg font-medium">Welcome to QuickDoubt!</p>
-            <p className="text-sm text-center max-w-md">
-              Select a subject above and ask any question. I'll explain it
-              step-by-step like a patient tutor.
+          <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4 py-16">
+            <div className="text-6xl mb-2">{theme.emoji}</div>
+            <h2 className="text-xl font-semibold text-slate-300">
+              {subject === "General" ? "Ask me anything!" : `Ready for ${subject}`}
+            </h2>
+            <p className="text-sm text-center max-w-sm leading-relaxed text-slate-500">
+              {subject === "General"
+                ? "I can help with any topic — just type your question below and I'll explain it step-by-step."
+                : `Ask me anything about ${subject} — I'll explain it step-by-step like a patient tutor.`}
             </p>
+            <div className="flex items-center gap-2 mt-2 text-xs text-slate-600">
+              <span>Tip: Press</span>
+              <kbd className="bg-slate-700 px-2 py-0.5 rounded text-slate-400 font-mono text-xs">Enter</kbd>
+              <span>to send</span>
+            </div>
           </div>
         )}
 
