@@ -29,6 +29,18 @@ export interface ExplainResponse {
   explanation: string;
 }
 
+export interface MindmapNode {
+  label: string;
+  children: MindmapNode[];
+}
+
+export interface VisualizeResponse {
+  mindmap: { root: string; children: MindmapNode[] };
+  flowchart: { steps: { id: string; label: string; next: string[] }[] };
+  table: { headers: string[]; rows: string[][] };
+  pieChart: { title: string; segments: { label: string; value: number }[] };
+}
+
 // ─── Chat API ─────────────────────────────────────────────────────────────────
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -92,4 +104,16 @@ export async function explainNotes(text: string, subject: string): Promise<strin
   const data = await response.json() as (ExplainResponse & AskError);
   if (!response.ok) throw new Error(data.error || `Explain failed (${response.status})`);
   return data.explanation;
+}
+
+export async function visualizeNotes(text: string): Promise<VisualizeResponse> {
+  const response = await fetch("/api/notes/visualize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+
+  const data = await response.json() as (VisualizeResponse & AskError);
+  if (!response.ok) throw new Error(data.error || `Visualize failed (${response.status})`);
+  return data;
 }
