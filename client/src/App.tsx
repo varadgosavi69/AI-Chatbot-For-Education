@@ -267,7 +267,7 @@ function App() {
         onScroll={handleScroll}
         className="flex-1 min-h-0 overflow-y-auto px-4 py-5"
       >
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div key={subject} className="max-w-3xl mx-auto space-y-4 chat-fade-in">
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
             <span className="text-5xl">🎓</span>
@@ -282,7 +282,7 @@ function App() {
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex message-bubble ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
               className={`max-w-[85%] md:max-w-[72%] rounded-2xl px-4 py-3 shadow-md ${
@@ -321,7 +321,7 @@ function App() {
 
         {/* Loading indicator */}
         {isLoading && (
-          <div className="flex justify-start">
+          <div className="flex justify-start message-bubble">
             <div className="rounded-2xl rounded-bl-none px-5 py-4 shadow-md border border-slate-600/30" style={{ backgroundColor: '#293548' }}>
               <div className="flex items-center gap-2">
                 <span className="typing-dot w-2.5 h-2.5 bg-slate-400 rounded-full inline-block" />

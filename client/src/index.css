@@ -140,3 +140,43 @@ body {
 .typing-dot:nth-child(3) {
   animation-delay: 0.4s;
 }
+
+/* Message slide-in animation */
+@keyframes message-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-bubble {
+  animation: message-in 0.3s ease-out both;
+}
+
+/* Chat area fade transition on subject switch */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.chat-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+/* Button press feedback */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button {
+  transition: all 0.15s ease;
+}
+
+/* Send button glow on hover */
+button[type="submit"]:not(:disabled):hover {
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.25);
+}
