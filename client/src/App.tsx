@@ -7,7 +7,7 @@ import {
   type ChangeEvent,
 } from "react";
 import ReactMarkdown from "react-markdown";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, type PieLabelRenderProps } from "recharts";
 import {
   askQuestion,
   uploadPdf,
@@ -240,9 +240,11 @@ function PieChartViz({ data }: { data: VisualizeResponse["pieChart"] }) {
             cx="50%"
             cy="50%"
             outerRadius={100}
-            label={({ label, percent }: { label: string; percent: number }) =>
-              `${label} (${(percent * 100).toFixed(0)}%)`
-            }
+            label={({ name, percent }: PieLabelRenderProps) => {
+              const labelText = name || "";
+              const percentValue = percent ?? 0;
+              return `${labelText} (${(percentValue * 100).toFixed(0)}%)`;
+            }}
             labelLine={true}
           >
             {data.segments?.map((_, index) => (
@@ -275,7 +277,7 @@ interface NotesState {
   vizError: string;
 }
 
-function NotesPanel({ subject, theme }: { subject: string; theme: SubjectTheme }) {
+function NotesPanel({ subject }: { subject: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<NotesState>({
     step: "idle",
@@ -655,7 +657,7 @@ function App() {
 
       {activeTab === "notes" && (
         <div className="flex-1 min-h-0 overflow-hidden">
-          <NotesPanel subject={subject} theme={theme} />
+          <NotesPanel subject={subject} />
         </div>
       )}
     </div>
