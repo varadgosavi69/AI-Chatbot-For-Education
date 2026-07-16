@@ -298,7 +298,17 @@ function NotesPanel({ subject, theme }: { subject: string; theme: SubjectTheme }
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setState((s) => ({ ...s, step: "uploading", fileName: file.name, error: "" }));
+    // Client-side validation: reject non-PDF files immediately
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      setState((s) => ({
+        ...s,
+        step: "error",
+        error: `"${file.name}" is not a PDF. Only .pdf files are accepted — please choose a PDF file.`,
+      }));
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
 
     let extracted: { text: string; pages: number };
     try {
