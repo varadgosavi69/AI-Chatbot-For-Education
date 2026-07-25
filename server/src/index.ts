@@ -4,6 +4,7 @@ import { GoogleGenerativeAI, GoogleGenerativeAIError, GoogleGenerativeAIFetchErr
 import dotenv from "dotenv";
 import multer from "multer";
 import { PDFParse } from "pdf-parse";
+import { createChunks, createEmbedding, retrieveRelevantChunks } from "./rag";
 
 dotenv.config();
 
@@ -102,24 +103,11 @@ function createDocumentId(): string {
 }
 
 function selectRelevantPdfContext(text: string, question: string): string {
-  const chunks = text
-    .split(/\n{2,}/)
-    .map((chunk) => chunk.replace(/\s+/g, " ").trim())
-    .filter((chunk) => chunk.length > 80);
-  const terms = question
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((term) => term.length > 2);
-
-  const scored = chunks.map((chunk, index) => {
-    const lower = chunk.toLowerCase();
-    const score = terms.reduce((total, term) => total + (lower.includes(term) ? 1 : 0), 0);
-    return { chunk, index, score };
-  });
-
-  scored.sort((a, b) => b.score - a.score || a.index - b.index);
-  const relevant = scored.slice(0, 8).map((item) => item.chunk).join("\n\n");
-  return (relevant || text).slice(0, 14000);
+  const chunks = createChunks(text, 400);
+  const embeddings = chunks.map((chunk) => createEmbedding(chunk));
+  const relevantMatches = retrieveRelevantChunks(chunks, embeddings, question, 4);
+  const relevantText = relevantMatches.map((match) => match.text).join("\n\n");
+  return (relevantText || text).slice(0, 14000);
 }
 
 // ─── POST /api/ask ───────────────────────────────────────────────────────────
@@ -264,8 +252,18 @@ app.post("/api/notes/chat", async (req: Request, res: Response): Promise<void> =
       generationConfig: { maxOutputTokens: 1800 },
     });
 
-    const answer = extractText(response) || "The PDF context did not produce an answer.";
-    res.json({ answer });
+    const answer = extractText(response) || "Information not found in the uploaded PDF.";
+    const normalizedAnswer = answer.trim().toLowerCase();
+    const fallbackMessage = "Information not found in the uploaded PDF.";
+    const shouldUseFallback =
+      normalizedAnswer.includes("not present") ||
+      normalizedAnswer.includes("not found") ||
+      normalizedAnswer.includes("does not contain") ||
+      normalizedAnswer.includes("cannot answer") ||
+      normalizedAnswer.includes("i don't know") ||
+      normalizedAnswer.includes("not enough information");
+
+    res.json({ answer: shouldUseFallback ? fallbackMessage : answer });
   } catch (error: unknown) {
     console.error("PDF chat error:", error);
     if (error instanceof GoogleGenerativeAIFetchError) {

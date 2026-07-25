@@ -24,6 +24,7 @@ body {
   background: #f8fafc;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  transition: background-color 180ms ease;
 }
 
 :root.dark body {
@@ -50,6 +51,10 @@ button:disabled {
   select,
   input {
     font-size: 16px;
+  }
+
+  body {
+    overflow-x: hidden;
   }
 }
 
@@ -177,6 +182,21 @@ button:disabled {
 
 button {
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 220ms ease-out both;
 }
 
 button:active:not(:disabled) {

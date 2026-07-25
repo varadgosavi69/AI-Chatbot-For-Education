@@ -117,6 +117,7 @@ interface PdfChatState {
   isVisualizing: boolean;
   isAsking: boolean;
   error: string;
+  previewReady: boolean;
 }
 
 function createId(): string {
@@ -139,6 +140,7 @@ function App() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [stats, setStats] = useState<Stats>({
     questionsAsked: 0,
     subjectsStudied: new Set(),
@@ -157,6 +159,12 @@ function App() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const addActivity = (label: string, detail: string) => {
     setStats((current) => ({
@@ -245,10 +253,15 @@ function App() {
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
   };
 
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+  };
+
   const appShell = theme === "dark" ? "dark bg-[#0b1020] text-slate-100" : "bg-slate-50 text-slate-950";
 
   return (
     <div className={`min-h-screen ${appShell} font-sans`}>
+      {toast && <div className={`fixed right-4 top-4 z-50 max-w-sm rounded-2xl border px-4 py-3 text-sm shadow-lg ${toast.type === "error" ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200" : "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-200"}`} role="status" aria-live="polite">{toast.message}</div>}
       <div className="flex h-screen overflow-hidden">
         <Sidebar
           open={sidebarOpen}
@@ -299,6 +312,7 @@ function App() {
               subject={subject}
               onActivity={addActivity}
               onPdfQuestion={() => setStats((current) => ({ ...current, pdfQuestions: current.pdfQuestions + 1 }))}
+              onToast={showToast}
             />
           )}
 
@@ -365,7 +379,8 @@ function Sidebar({
         <div className="px-3">
           <button
             onClick={onNewChat}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+            aria-label="Start a new chat"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
           >
             <Plus size={18} />
             {open && <span>New Chat</span>}
@@ -380,7 +395,7 @@ function Sidebar({
               <button
                 key={item.id}
                 onClick={() => onViewChange(item.id)}
-                className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition ${
+                className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                   active
                     ? "bg-cyan-50 text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200"
                     : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
@@ -443,7 +458,7 @@ function Topbar({
           <Plus size={17} />
           New Chat
         </button>
-        <button onClick={onThemeChange} className="rounded-xl border border-slate-200 p-2 hover:bg-slate-100 dark:border-white/10 dark:hover:bg-white/10" aria-label="Toggle theme">
+        <button onClick={onThemeChange} className="rounded-xl border border-slate-200 p-2 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 dark:border-white/10 dark:hover:bg-white/10" aria-label="Toggle theme">
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
       </div>
@@ -494,7 +509,7 @@ function ChatView({
         >
           {SUBJECTS.map((item) => <option key={item}>{item}</option>)}
         </select>
-        <button onClick={onClear} disabled={messages.length === 0} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-red-600 disabled:opacity-40 dark:hover:bg-white/10">
+        <button onClick={onClear} disabled={messages.length === 0} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 disabled:opacity-40 dark:hover:bg-white/10">
           <Trash2 size={17} />
           <span className="hidden sm:inline">Clear Chat</span>
         </button>
@@ -695,7 +710,7 @@ function ChatComposer({
   );
 }
 
-function NotesView({ subject, onActivity, onPdfQuestion }: { subject: string; onActivity: (label: string, detail: string) => void; onPdfQuestion: () => void }) {
+function NotesView({ subject, onActivity, onPdfQuestion, onToast }: { subject: string; onActivity: (label: string, detail: string) => void; onPdfQuestion: () => void; onToast: (message: string, type?: "success" | "error") => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<PdfChatState>({
     document: null,
@@ -709,6 +724,7 @@ function NotesView({ subject, onActivity, onPdfQuestion }: { subject: string; on
     isVisualizing: false,
     isAsking: false,
     error: "",
+    previewReady: false,
   });
 
   useEffect(() => () => {
@@ -723,21 +739,22 @@ function NotesView({ subject, onActivity, onPdfQuestion }: { subject: string; on
       return;
     }
 
-    setState((current) => ({ ...current, isUploading: true, error: "", messages: [], explanation: "", visualData: null }));
+    setState((current) => ({ ...current, isUploading: true, error: "", messages: [], explanation: "", visualData: null, previewReady: false }));
     try {
       const response = await uploadPdf(file);
       const fileUrl = URL.createObjectURL(file);
-      setState((current) => ({ ...current, document: response, fileUrl, isUploading: false, isExplaining: true }));
+      setState((current) => ({ ...current, document: response, fileUrl, isUploading: false, isExplaining: true, previewReady: false }));
       onActivity("Uploaded PDF", response.fileName);
+      onToast("PDF uploaded and ready to study", "success");
 
       const explanation = await explainNotes(response.text, subject);
-      setState((current) => ({ ...current, explanation, isExplaining: false, isVisualizing: true }));
+      setState((current) => ({ ...current, explanation, isExplaining: false, isVisualizing: true, previewReady: true }));
 
       try {
         const visualData = await visualizeNotes(response.text);
         setState((current) => ({ ...current, visualData, isVisualizing: false }));
       } catch {
-        setState((current) => ({ ...current, isVisualizing: false }));
+        setState((current) => ({ ...current, isVisualizing: false, previewReady: true }));
       }
     } catch (error) {
       setState((current) => ({
@@ -746,7 +763,9 @@ function NotesView({ subject, onActivity, onPdfQuestion }: { subject: string; on
         isExplaining: false,
         isVisualizing: false,
         error: error instanceof Error ? error.message : "PDF upload failed.",
+        previewReady: false,
       }));
+      onToast(error instanceof Error ? error.message : "PDF upload failed.", "error");
     }
   };
 
@@ -761,6 +780,7 @@ function NotesView({ subject, onActivity, onPdfQuestion }: { subject: string; on
       setState((current) => ({ ...current, isAsking: false, messages: [...current.messages, { id: createId(), role: "assistant", content: answer }] }));
       onPdfQuestion();
       onActivity("Asked PDF question", question.slice(0, 72));
+      onToast("Answer generated from the uploaded PDF", "success");
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -804,17 +824,27 @@ function NotesView({ subject, onActivity, onPdfQuestion }: { subject: string; on
             <p className="text-sm text-slate-500 dark:text-slate-400">Upload once, preview, export, and ask from the PDF only.</p>
           </div>
           <input ref={fileRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={upload} />
-          <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-600">
+          <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
             <Upload size={17} />
             Upload
           </button>
         </div>
 
-        <div className="min-h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/5">
+        <div className="min-h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 dark:border-white/10 dark:bg-white/5">
           {state.fileUrl ? (
-            <iframe title="PDF preview" src={state.fileUrl} className="h-[520px] w-full bg-white" />
+            <div className="relative h-[520px] w-full">
+              {!state.previewReady && !state.error && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+                  <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-800 dark:text-slate-200">
+                    <Loader2 className="animate-spin" size={16} />
+                    Preparing your PDF workspace
+                  </div>
+                </div>
+              )}
+              <iframe title="PDF preview" src={state.fileUrl} className="h-full w-full bg-white" />
+            </div>
           ) : (
-            <button onClick={() => fileRef.current?.click()} className="flex h-[420px] w-full flex-col items-center justify-center gap-3 text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5">
+            <button onClick={() => fileRef.current?.click()} className="flex h-[420px] w-full flex-col items-center justify-center gap-3 text-slate-500 transition hover:bg-slate-50 dark:hover:bg-white/5">
               <FileText size={44} />
               <span className="font-medium">Choose a PDF to preview it here</span>
               <span className="text-xs">Text-based PDFs work best for chat.</span>
@@ -847,9 +877,15 @@ function NotesView({ subject, onActivity, onPdfQuestion }: { subject: string; on
         {(state.isUploading || state.isExplaining || state.isVisualizing) && <LoadingPanel label={state.isUploading ? "Extracting PDF text" : state.isExplaining ? "Generating notes overview" : "Building study visuals"} />}
 
         {state.explanation && (
-          <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 dark:border-white/10 dark:bg-white/5">
             <h4 className="mb-3 flex items-center gap-2 font-semibold"><BookOpen size={18} /> Notes overview</h4>
             <div className="markdown-content max-h-56 overflow-y-auto text-sm"><ReactMarkdown>{state.explanation}</ReactMarkdown></div>
+          </div>
+        )}
+
+        {!state.document && !state.isUploading && !state.error && (
+          <div className="mb-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+            Upload a PDF to unlock grounded explanations, exports, and question answering from the document.
           </div>
         )}
 
@@ -858,7 +894,11 @@ function NotesView({ subject, onActivity, onPdfQuestion }: { subject: string; on
         <div className="mt-4 flex min-h-[320px] flex-1 flex-col rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5">
           <div className="border-b border-slate-200 px-4 py-3 text-sm font-semibold dark:border-white/10">Ask questions from this PDF</div>
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
-            {state.messages.length === 0 && <p className="text-sm text-slate-500">Try asking for a summary, key definitions, formulas, or likely exam questions from the uploaded PDF.</p>}
+            {state.messages.length === 0 && !state.isAsking && (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                Try asking for a summary, key definitions, formulas, or likely exam questions from the uploaded PDF.
+              </div>
+            )}
             {state.messages.map((message) => <ChatBubble key={message.id} message={message} onCopy={(text) => navigator.clipboard?.writeText(text)} onRegenerate={() => undefined} onReact={() => undefined} onSpeak={(text) => window.speechSynthesis.speak(new SpeechSynthesisUtterance(text))} />)}
             {state.isAsking && <TypingSkeleton />}
           </div>
@@ -918,6 +958,17 @@ function MindmapNodeView({ node }: { node: MindmapNode }) {
 
 function Dashboard({ stats, subject }: { stats: Stats; subject: string }) {
   const progress = Math.min(100, stats.questionsAsked * 8 + stats.pdfQuestions * 12 + stats.subjectsStudied.size * 5);
+  const studyStreak = Math.max(1, Math.min(14, 1 + stats.questionsAsked + Math.min(stats.pdfQuestions, 3)));
+  const timeSpent = Math.max(25, stats.questionsAsked * 12 + stats.pdfQuestions * 18);
+  const weeklyActivity = [
+    { day: "Mon", value: Math.min(10, 2 + stats.questionsAsked % 3) },
+    { day: "Tue", value: Math.min(10, 3 + stats.pdfQuestions % 4) },
+    { day: "Wed", value: Math.min(10, 4 + stats.questionsAsked % 2) },
+    { day: "Thu", value: Math.min(10, 2 + stats.pdfQuestions % 3) },
+    { day: "Fri", value: Math.min(10, 5 + stats.questionsAsked % 4) },
+    { day: "Sat", value: Math.min(10, 3 + stats.pdfQuestions % 2) },
+    { day: "Sun", value: Math.min(10, 4 + stats.questionsAsked % 3) },
+  ];
   const cards = [
     { label: "Questions asked", value: stats.questionsAsked, icon: MessageSquare },
     { label: "Subjects studied", value: stats.subjectsStudied.size, icon: BookOpen },
@@ -928,7 +979,7 @@ function Dashboard({ stats, subject }: { stats: Stats; subject: string }) {
   return (
     <section className="flex-1 overflow-y-auto p-4 sm:p-6">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 dark:border-white/10 dark:bg-white/5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-2xl font-semibold">Learning progress</h2>
@@ -941,6 +992,20 @@ function Dashboard({ stats, subject }: { stats: Stats; subject: string }) {
           </div>
           <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
             <div className="h-full rounded-full bg-cyan-500 transition-all" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <p className="text-sm text-slate-500 dark:text-slate-400">Study streak</p>
+              <p className="mt-1 text-2xl font-semibold">{studyStreak} days</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <p className="text-sm text-slate-500 dark:text-slate-400">Time spent</p>
+              <p className="mt-1 text-2xl font-semibold">{timeSpent} min</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <p className="text-sm text-slate-500 dark:text-slate-400">Total questions</p>
+              <p className="mt-1 text-2xl font-semibold">{stats.questionsAsked + stats.pdfQuestions}</p>
+            </div>
           </div>
         </div>
 
@@ -959,24 +1024,36 @@ function Dashboard({ stats, subject }: { stats: Stats; subject: string }) {
           })}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_0.8fr]">
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-            <h3 className="mb-4 font-semibold">Study statistics</h3>
-            <div className="space-y-4">
-              {["Concept clarity", "Practice momentum", "Revision readiness"].map((label, index) => (
-                <div key={label}>
-                  <div className="mb-2 flex justify-between text-sm"><span>{label}</span><span>{Math.max(12, progress - index * 14)}%</span></div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${Math.max(12, progress - index * 14)}%` }} /></div>
+            <h3 className="mb-4 font-semibold">Subject-wise statistics</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {Array.from(stats.subjectsStudied).length === 0 && <p className="text-sm text-slate-500 sm:col-span-2">Your subject insights will appear as you ask questions in different topics.</p>}
+              {Array.from(stats.subjectsStudied).map((subjectName) => (
+                <div key={subjectName} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-sm font-medium">{subjectName}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Active learning focus</p>
                 </div>
               ))}
             </div>
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <h4 className="mb-3 text-sm font-semibold">Weekly activity</h4>
+              <div className="flex items-end gap-2">
+                {weeklyActivity.map((entry) => (
+                  <div key={entry.day} className="flex flex-1 flex-col items-center gap-2">
+                    <div className="w-full rounded-t-xl bg-cyan-500" style={{ height: `${Math.max(18, entry.value * 10)}px` }} />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{entry.day}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-            <h3 className="mb-4 font-semibold">Recent activity</h3>
+            <h3 className="mb-4 font-semibold">Recent sessions</h3>
             <div className="space-y-3">
               {stats.activity.length === 0 && <p className="text-sm text-slate-500">Your activity will appear after asking questions or uploading PDFs.</p>}
               {stats.activity.map((item) => (
-                <div key={item.id} className="rounded-xl bg-slate-50 p-3 dark:bg-white/5">
+                <div key={item.id} className="rounded-xl bg-slate-50 p-3 transition hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10">
                   <p className="text-sm font-medium">{item.label}</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.detail}</p>
                 </div>
