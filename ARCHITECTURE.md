@@ -12,7 +12,8 @@
 │   │  Subject selector   │   │  PDF upload (drag/click) │    │
 │   │  Message thread     │   │  Extracted text preview  │    │
 │   │  Typing indicators  │   │  Simplified explanation  │    │
-│   │  Retry on error     │   │  ┌──────────────────┐   │    │
+│   │  Retry on error     │   │  Markdown/PDF export     │    │
+│   │                     │   │  ┌──────────────────┐   │    │
 │   │                     │   │  │ Visual Diagrams  │   │    │
 │   │                     │   │  │  Mind Map        │   │    │
 │   │                     │   │  │  Flowchart       │   │    │
@@ -27,13 +28,15 @@
                          │ /api/notes/upload
                          │ /api/notes/explain
                          │ /api/notes/visualize
+                         │ /api/notes/chat
                          ▼
 ┌──────────────────────────────────────────────────────────────┐
 │                   Express Server (Port 3001)                  │
 │                   Node.js + TypeScript                       │
 │                                                              │
-│   POST /api/ask           →  Chat with Gemini               │
+│   POST /api/ask           →  Tutor chat with Gemini         │
 │   POST /api/notes/upload  →  multer + pdf-parse             │
+│   POST /api/notes/chat    →  chunked RAG over uploaded PDF  │
 │   POST /api/notes/explain →  Gemini (markdown explanation)   │
 │   POST /api/notes/visualize → Gemini (structured JSON)      │
 │   GET  /api/health        →  Liveness check                 │
@@ -66,6 +69,7 @@
 |-------|--------------------|
 | `POST /api/ask` | Validates body, builds message history, calls Gemini `generateContent`, returns `{ answer }`. |
 | `POST /api/notes/upload` | `multer` stores file in memory. `pdf-parse` extracts text. Returns `{ text, pages, charCount }`. Returns 422 if no text found (scanned PDF). |
+| `POST /api/notes/chat` | Splits uploaded PDFs into chunks, creates simple embeddings, retrieves top-k chunks, and answers only from retrieved context. Returns `{ answer }`. |
 | `POST /api/notes/explain` | Sends extracted text to Gemini with a "explain for a student" system prompt. Returns `{ explanation }` as markdown. |
 | `POST /api/notes/visualize` | Sends text to Gemini with a strict JSON-only system prompt. Strips markdown fences, parses JSON, validates 4 required keys. Retries once if JSON is malformed. Returns structured object. |
 
@@ -90,6 +94,20 @@ POST /api/notes/upload
       │
       ▼
 [Client receives] { text, pages, charCount }
+      │
+      ▼
+POST /api/notes/chat (question + documentId)
+      │
+  chunk PDF text
+      │
+  create simple embeddings
+      │
+  retrieve top-k relevant chunks
+      │
+  Gemini answers only from retrieved chunks
+      │
+      ▼
+[Client renders] grounded answer or fallback message
       │
       ▼
 POST /api/notes/explain (text + subject)
