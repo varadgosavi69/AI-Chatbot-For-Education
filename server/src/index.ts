@@ -32,7 +32,8 @@ if (!apiKey || apiKey === "your_gemini_api_key_here") {
 }
 
 const gemini = new GoogleGenerativeAI(apiKey);
-const geminiModel = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
+const GEMINI_MODEL_NAME = "gemini-3.5-flash";
+const geminiModel = gemini.getGenerativeModel({ model: GEMINI_MODEL_NAME });
 console.log("✅ Gemini-only backend initialized");
 
 // Multer — store upload in memory (no disk writes)
