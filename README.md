@@ -18,7 +18,7 @@ QuickDoubt is a student-facing AI study assistant that combines a doubt-clearing
 
 - Frontend: React, TypeScript, Vite
 - Backend: Node.js, Express, TypeScript
-- AI: Google Gemini (`gemini-1.5-flash`)
+- AI: Google Gemini (`gemini-3.5-flash`)
 - PDF parsing: `pdf-parse`
 - Charts: Recharts
 - Markdown rendering: `react-markdown`

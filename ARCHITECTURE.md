@@ -41,7 +41,7 @@
                          │ HTTPS
                          ▼
 ┌──────────────────────────────────────────────────────────────┐
-│               Google Gemini API (gemini-1.5-flash)          │
+│               Google Gemini API (gemini-3.5-flash)          │
 │                                                              │
 │   Authenticated via GEMINI_API_KEY in server/.env           │
 └──────────────────────────────────────────────────────────────┘
