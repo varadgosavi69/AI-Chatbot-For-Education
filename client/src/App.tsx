@@ -290,7 +290,13 @@ function App() {
           {view === "chat" && (
             <ChatView
               subject={subject}
-              setSubject={setSubject}
+              onSubjectChange={(nextSubject) => {
+                setSubject(nextSubject);
+                setMessages([]);
+                setInput("");
+                setLastQuestion(null);
+                setIsLoading(false);
+              }}
               messages={messages}
               input={input}
               setInput={setInput}
@@ -468,7 +474,7 @@ function Topbar({
 
 function ChatView({
   subject,
-  setSubject,
+  onSubjectChange,
   messages,
   input,
   setInput,
@@ -484,7 +490,7 @@ function ChatView({
   onSpeak,
 }: {
   subject: string;
-  setSubject: (subject: string) => void;
+  onSubjectChange: (subject: string) => void;
   messages: ChatMessage[];
   input: string;
   setInput: (input: string) => void;
@@ -504,8 +510,9 @@ function ChatView({
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.02] sm:px-6">
         <select
           value={subject}
-          onChange={(event) => setSubject(event.target.value)}
-          className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-cyan-400 dark:border-white/10 dark:bg-white/10"
+          onChange={(event) => onSubjectChange(event.target.value)}
+          aria-label="Select study subject"
+          className="min-w-[220px] max-w-[280px] appearance-none rounded-2xl border border-slate-200 bg-white/95 px-4 py-2.5 pr-10 text-sm font-semibold shadow-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 dark:border-white/10 dark:bg-slate-900/80 sm:min-w-[240px] sm:text-[15px]"
         >
           {SUBJECTS.map((item) => <option key={item}>{item}</option>)}
         </select>
