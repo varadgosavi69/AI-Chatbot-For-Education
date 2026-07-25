@@ -174,13 +174,19 @@ function App() {
     }));
   };
 
-  const newChat = () => {
+  const resetConversation = () => {
     setMessages([]);
     setInput("");
     setLastQuestion(null);
+    setIsLoading(false);
+    setIsStreaming(false);
     setView("chat");
     setMobileSidebarOpen(false);
     inputRef.current?.focus();
+  };
+
+  const newChat = () => {
+    resetConversation();
   };
 
   const clearChat = () => {
@@ -295,10 +301,7 @@ function App() {
               subject={subject}
               onSubjectChange={(nextSubject) => {
                 setSubject(nextSubject);
-                setMessages([]);
-                setInput("");
-                setLastQuestion(null);
-                setIsLoading(false);
+                resetConversation();
               }}
               messages={messages}
               input={input}
