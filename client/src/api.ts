@@ -46,10 +46,7 @@ export interface VisualizeResponse {
 // ─── Chat API ─────────────────────────────────────────────────────────────────
 
 const REQUEST_TIMEOUT_MS = 30_000;
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : undefined);
-if (!apiBaseUrl) {
-  throw new Error("VITE_API_BASE_URL must be defined in production.");
-}
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : "");
 
 function apiUrl(path: string): string {
   return `${apiBaseUrl.replace(/\/$/, "")}${path}`;
