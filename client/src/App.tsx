@@ -516,7 +516,7 @@ function ChatView({
 }) {
   return (
     <section className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.02] sm:px-6">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60 sm:px-6">
         <select
           value={subject}
           onChange={(event) => onSubjectChange(event.target.value)}
@@ -532,7 +532,7 @@ function ChatView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto max-w-5xl space-y-6">
           {messages.length === 0 && !isLoading && <HomePrompts subject={subject} onPrompt={onSubmit} />}
           {messages.map((message) => (
             <ChatBubble
@@ -574,7 +574,7 @@ function HomePrompts({ subject, onPrompt }: { subject: string; onPrompt: (prompt
           <button
             key={prompt}
             onClick={() => onPrompt(prompt)}
-            className="rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm font-medium shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:hover:border-cyan-400/50"
+            className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 text-left text-sm font-medium shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-lg dark:border-white/10 dark:bg-slate-900/80 dark:hover:border-cyan-400/50"
           >
             {prompt}
           </button>
@@ -603,12 +603,12 @@ function ChatBubble({
       {isAssistant && <Avatar icon={<Bot size={18} />} />}
       <div className={`max-w-[min(760px,88%)] ${message.role === "user" ? "order-first" : ""}`}>
         <div
-          className={`rounded-2xl px-4 py-3 text-sm leading-7 shadow-sm ${
+          className={`rounded-3xl px-4 py-3.5 text-sm leading-7 shadow-sm ${
             message.role === "user"
-              ? "bg-slate-950 text-white dark:bg-cyan-500"
+              ? "bg-slate-900 text-white dark:bg-cyan-600"
               : message.isError
                 ? "border border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200"
-                : "border border-slate-200 bg-white text-slate-800 dark:border-white/10 dark:bg-white/6 dark:text-slate-100"
+                : "border border-slate-200/80 bg-white/90 text-slate-800 shadow-sm dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-100"
           }`}
         >
           {isAssistant && !message.isError ? <div className="markdown-content"><ReactMarkdown>{message.content}</ReactMarkdown></div> : <p className="whitespace-pre-wrap">{message.content}</p>}
@@ -704,8 +704,8 @@ function ChatComposer({
   };
 
   return (
-    <footer className="border-t border-slate-200 bg-white/80 px-4 py-4 backdrop-blur-xl dark:border-white/10 dark:bg-[#0b1020]/80 sm:px-6">
-      <form onSubmit={submit} className="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg shadow-slate-200/50 dark:border-white/10 dark:bg-white/6 dark:shadow-none">
+    <footer className="border-t border-slate-200/80 bg-white/80 px-4 py-4 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/60 sm:px-6">
+      <form onSubmit={submit} className="mx-auto flex max-w-5xl items-end gap-2 rounded-2xl border border-slate-200/80 bg-white/90 p-2 shadow-sm shadow-slate-200/40 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-none">
         <button type="button" title="Voice input" onClick={startVoice} className={`rounded-xl p-3 ${listening ? "bg-red-100 text-red-600 dark:bg-red-500/20" : "hover:bg-slate-100 dark:hover:bg-white/10"}`}>
           <Mic size={19} />
         </button>
@@ -833,7 +833,7 @@ function NotesView({ subject, onActivity, onPdfQuestion, onToast }: { subject: s
 
   return (
     <section className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(360px,0.9fr)_minmax(420px,1.1fr)]">
-      <div className="border-b border-slate-200 p-4 dark:border-white/10 sm:p-6 lg:border-b-0 lg:border-r">
+      <div className="border-b border-slate-200/80 bg-white/70 p-4 backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/50 sm:p-6 lg:border-b-0 lg:border-r">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">PDF study room</h2>
@@ -846,7 +846,7 @@ function NotesView({ subject, onActivity, onPdfQuestion, onToast }: { subject: s
           </button>
         </div>
 
-        <div className="min-h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 dark:border-white/10 dark:bg-white/5">
+        <div className="min-h-[420px] overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 dark:border-white/10 dark:bg-slate-900/80">
           {state.fileUrl ? (
             <div className="relative h-[520px] w-full">
               {!state.previewReady && !state.error && (
@@ -870,7 +870,7 @@ function NotesView({ subject, onActivity, onPdfQuestion, onToast }: { subject: s
         {state.error && <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-200">{state.error}</p>}
       </div>
 
-      <div className="flex min-h-0 flex-col p-4 sm:p-6">
+      <div className="flex min-h-0 flex-col bg-slate-50/60 p-4 dark:bg-slate-950/30 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold">{state.document?.fileName || "No PDF uploaded"}</h3>
@@ -893,25 +893,25 @@ function NotesView({ subject, onActivity, onPdfQuestion, onToast }: { subject: s
         {(state.isUploading || state.isExplaining || state.isVisualizing) && <LoadingPanel label={state.isUploading ? "Extracting PDF text" : state.isExplaining ? "Generating notes overview" : "Building study visuals"} />}
 
         {state.explanation && (
-          <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 dark:border-white/10 dark:bg-white/5">
+          <div className="mb-4 rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition-all duration-300 dark:border-white/10 dark:bg-slate-900/80">
             <h4 className="mb-3 flex items-center gap-2 font-semibold"><BookOpen size={18} /> Notes overview</h4>
             <div className="markdown-content max-h-56 overflow-y-auto text-sm"><ReactMarkdown>{state.explanation}</ReactMarkdown></div>
           </div>
         )}
 
         {!state.document && !state.isUploading && !state.error && (
-          <div className="mb-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+          <div className="mb-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300">
             Upload a PDF to unlock grounded explanations, exports, and question answering from the document.
           </div>
         )}
 
         {state.visualData && <MiniVisuals data={state.visualData} />}
 
-        <div className="mt-4 flex min-h-[320px] flex-1 flex-col rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5">
+        <div className="mt-4 flex min-h-[320px] flex-1 flex-col rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900/80">
           <div className="border-b border-slate-200 px-4 py-3 text-sm font-semibold dark:border-white/10">Ask questions from this PDF</div>
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
             {state.messages.length === 0 && !state.isAsking && (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300">
                 Try asking for a summary, key definitions, formulas, or likely exam questions from the uploaded PDF.
               </div>
             )}
