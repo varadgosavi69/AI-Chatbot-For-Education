@@ -23,7 +23,7 @@ app.use(
 );
 app.use(express.json());
 
-// Validate API key on startup
+// Validate the only required API key on startup.
 const apiKey = process.env.GEMINI_API_KEY || "";
 if (!apiKey || apiKey === "your_gemini_api_key_here") {
   console.error("❌ GEMINI_API_KEY is missing or still set to the placeholder value.");
@@ -33,6 +33,7 @@ if (!apiKey || apiKey === "your_gemini_api_key_here") {
 
 const gemini = new GoogleGenerativeAI(apiKey);
 const geminiModel = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
+console.log("✅ Gemini-only backend initialized");
 
 // Multer — store upload in memory (no disk writes)
 const upload = multer({

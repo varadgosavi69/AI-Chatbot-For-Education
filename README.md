@@ -55,6 +55,8 @@ cp .env.example .env
 
 Then edit `server/.env` and set your Gemini API key.
 
+> Only `GEMINI_API_KEY` is required for the backend. The server no longer uses any Anthropic provider or env var.
+>
 > In production, set `VITE_API_BASE_URL` on the frontend host (Vercel) and `FRONTEND_URL` on the backend host (Render). The frontend should point to the deployed Render backend URL, and the backend should allow the deployed Vercel URL.
 
 ### 4. Run the backend
