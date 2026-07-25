@@ -1,11 +1,9 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI, GoogleGenerativeAIError, GoogleGenerativeAIFetchError } from "@google/generative-ai";
 import dotenv from "dotenv";
 import multer from "multer";
-// pdf-parse ships CJS; esModuleInterop handles the default import
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string; numpages: number }>;
+import { PDFParse } from "pdf-parse";
 
 dotenv.config();
 
@@ -26,16 +24,15 @@ app.use(
 app.use(express.json());
 
 // Validate API key on startup
-const apiKey = process.env.ANTHROPIC_API_KEY || "";
-if (!apiKey || apiKey === "your_anthropic_api_key_here" || !apiKey.startsWith("sk-")) {
-  console.error("❌ ANTHROPIC_API_KEY is missing or still set to the placeholder value.");
-  console.error("   Set a real key in server/.env — it must start with 'sk-'.");
+const apiKey = process.env.GEMINI_API_KEY || "";
+if (!apiKey || apiKey === "your_gemini_api_key_here") {
+  console.error("❌ GEMINI_API_KEY is missing or still set to the placeholder value.");
+  console.error("   Set a real key in server/.env and make sure it is valid.");
   process.exit(1);
 }
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const gemini = new GoogleGenerativeAI(apiKey);
+const geminiModel = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // Multer — store upload in memory (no disk writes)
 const upload = multer({
@@ -68,13 +65,19 @@ function buildSystemPrompt(subject: string): string {
   return `You are an expert, patient tutor for ${subject}. Explain clearly, step-by-step, at a student's level. Use simple examples. Keep answers concise but complete.`;
 }
 
-function extractText(responseContent: Anthropic.ContentBlock[]): string {
-  return (
-    responseContent
-      .filter((b) => b.type === "text")
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("") || ""
-  );
+function mapHistory(history: HistoryMessage[]): Array<{ role: "user" | "model"; parts: { text: string }[] }> {
+  return (history || []).map((msg) => ({
+    role: msg.role === "assistant" ? "model" : "user",
+    parts: [{ text: msg.content }],
+  }));
+}
+
+function extractText(response: { response?: { text?: () => string } }): string {
+  try {
+    return response.response?.text?.().trim() || "";
+  } catch {
+    return "";
+  }
 }
 
 function stripMarkdownFences(raw: string): string {
@@ -93,29 +96,28 @@ app.post("/api/ask", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const messages: Anthropic.MessageParam[] = [
-      ...(history || []).map((msg) => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-      })),
-      { role: "user" as const, content: question },
+    const contents = [
+      ...mapHistory(history),
+      { role: "user" as const, parts: [{ text: question }] },
     ];
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250514",
-      max_tokens: 2048,
-      system: buildSystemPrompt(subject),
-      messages,
+    const response = await geminiModel.generateContent({
+      systemInstruction: buildSystemPrompt(subject),
+      contents,
+      generationConfig: { maxOutputTokens: 2048 },
     });
 
-    const answer =
-      extractText(response.content) || "Sorry, I could not generate a response.";
+    const answer = extractText(response) || "Sorry, I could not generate a response.";
 
     res.json({ answer });
   } catch (error: unknown) {
-    console.error("Error calling Claude API:", error);
-    if (error instanceof Anthropic.APIError) {
-      res.status(error.status || 500).json({ error: `Claude API error: ${error.message}` });
+    console.error("Error calling Gemini API:", error);
+    if (error instanceof GoogleGenerativeAIFetchError) {
+      res.status(error.status || 500).json({ error: `Gemini API error: ${error.message}` });
+      return;
+    }
+    if (error instanceof GoogleGenerativeAIError) {
+      res.status(500).json({ error: `Gemini API error: ${error.message}` });
       return;
     }
     res.status(500).json({ error: "Internal server error" });
@@ -135,7 +137,19 @@ app.post(
         return;
       }
 
-      const parsed = await pdfParse(req.file.buffer);
+      let parsed;
+      try {
+        const parser = new PDFParse({ data: new Uint8Array(req.file.buffer) });
+        parsed = await parser.getText();
+      } catch (parseErr: unknown) {
+        console.error("PDF parsing crashed server-side:", parseErr);
+        res.status(500).json({
+          error: "PDF parsing crashed. The file might be corrupted or in an unsupported format.",
+          details: parseErr instanceof Error ? parseErr.message : String(parseErr),
+        });
+        return;
+      }
+
       const text = parsed.text.trim();
 
       if (!text || text.length < 10) {
@@ -146,20 +160,23 @@ app.post(
         return;
       }
 
-      res.json({ text, pages: parsed.numpages, charCount: text.length });
+      res.json({ text, pages: parsed.total, charCount: text.length });
     } catch (err: unknown) {
-      console.error("PDF parse error:", err);
+      console.error("PDF upload/parse general error:", err);
       if (err instanceof Error && err.message === "Only PDF files are accepted") {
         res.status(400).json({ error: "Only PDF files are accepted. Please upload a .pdf file." });
         return;
       }
-      res.status(500).json({ error: "Failed to extract text from the PDF." });
+      res.status(500).json({
+        error: "Failed to extract text from the PDF.",
+        details: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 );
 
 // ─── POST /api/notes/explain ─────────────────────────────────────────────────
-// Takes extracted text + subject, returns a markdown explanation from Claude.
+// Takes extracted text + subject, returns a markdown explanation from Gemini.
 
 app.post("/api/notes/explain", async (req: Request, res: Response): Promise<void> => {
   try {
@@ -179,24 +196,27 @@ app.post("/api/notes/explain", async (req: Request, res: Response): Promise<void
     const userMessage =
       `Subject: ${subjectLabel}\n\nNotes to explain:\n\n${text.slice(0, 12000)}`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250514",
-      max_tokens: 3000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
+    const response = await geminiModel.generateContent({
+      systemInstruction: systemPrompt,
+      contents: [{ role: "user", parts: [{ text: userMessage }] }],
+      generationConfig: { maxOutputTokens: 3000 },
     });
 
-    const explanation = extractText(response.content);
+    const explanation = extractText(response);
     if (!explanation) {
-      res.status(500).json({ error: "Claude returned an empty explanation." });
+      res.status(500).json({ error: "Gemini returned an empty explanation." });
       return;
     }
 
     res.json({ explanation });
   } catch (error: unknown) {
     console.error("Explain error:", error);
-    if (error instanceof Anthropic.APIError) {
-      res.status(error.status || 500).json({ error: `Claude API error: ${error.message}` });
+    if (error instanceof GoogleGenerativeAIFetchError) {
+      res.status(error.status || 500).json({ error: `Gemini API error: ${error.message}` });
+      return;
+    }
+    if (error instanceof GoogleGenerativeAIError) {
+      res.status(500).json({ error: `Gemini API error: ${error.message}` });
       return;
     }
     res.status(500).json({ error: "Failed to generate explanation." });
@@ -218,18 +238,21 @@ Return a JSON object matching this exact shape:
 All four keys are required. Do not add extra keys.`;
 
 async function callVisualize(text: string): Promise<string> {
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250514",
-    max_tokens: 3000,
-    system: VISUALIZE_SYSTEM,
-    messages: [
+  const response = await geminiModel.generateContent({
+    systemInstruction: VISUALIZE_SYSTEM,
+    contents: [
       {
         role: "user",
-        content: `Extract visual structure from these notes. Return ONLY valid JSON:\n\n${text.slice(0, 10000)}`,
+        parts: [
+          {
+            text: `Extract visual structure from these notes. Return ONLY valid JSON:\n\n${text.slice(0, 10000)}`,
+          },
+        ],
       },
     ],
+    generationConfig: { maxOutputTokens: 3000, responseMimeType: "application/json" },
   });
-  return extractText(response.content);
+  return extractText(response);
 }
 
 app.post("/api/notes/visualize", async (req: Request, res: Response): Promise<void> => {
@@ -250,18 +273,21 @@ app.post("/api/notes/visualize", async (req: Request, res: Response): Promise<vo
     } catch {
       // Retry once with stricter prompt
       console.warn("Visualize: first attempt returned invalid JSON, retrying…");
-      const retry = await anthropic.messages.create({
-        model: "claude-sonnet-4-5-20250514",
-        max_tokens: 3000,
-        system: VISUALIZE_SYSTEM + "\n\nCRITICAL: Return ONLY the raw JSON object. Nothing else.",
-        messages: [
+      const retry = await geminiModel.generateContent({
+        systemInstruction: VISUALIZE_SYSTEM + "\n\nCRITICAL: Return ONLY the raw JSON object. Nothing else.",
+        contents: [
           {
             role: "user",
-            content: `The following notes need to be structured into a JSON object. Output ONLY the JSON:\n\n${text.slice(0, 8000)}`,
+            parts: [
+              {
+                text: `The following notes need to be structured into a JSON object. Output ONLY the JSON:\n\n${text.slice(0, 8000)}`,
+              },
+            ],
           },
         ],
+        generationConfig: { maxOutputTokens: 3000, responseMimeType: "application/json" },
       });
-      const retryRaw = stripMarkdownFences(extractText(retry.content));
+      const retryRaw = stripMarkdownFences(extractText(retry));
       try {
         parsed = JSON.parse(retryRaw);
       } catch {
@@ -284,8 +310,12 @@ app.post("/api/notes/visualize", async (req: Request, res: Response): Promise<vo
     res.json(parsed);
   } catch (error: unknown) {
     console.error("Visualize error:", error);
-    if (error instanceof Anthropic.APIError) {
-      res.status(error.status || 500).json({ error: `Claude API error: ${error.message}` });
+    if (error instanceof GoogleGenerativeAIFetchError) {
+      res.status(error.status || 500).json({ error: `Gemini API error: ${error.message}` });
+      return;
+    }
+    if (error instanceof GoogleGenerativeAIError) {
+      res.status(500).json({ error: `Gemini API error: ${error.message}` });
       return;
     }
     res.status(500).json({ error: "Failed to generate visual data." });

@@ -18,7 +18,7 @@ QuickDoubt is a student-facing AI study assistant that combines a doubt-clearing
 
 - Frontend: React, TypeScript, Vite
 - Backend: Node.js, Express, TypeScript
-- AI: Anthropic Claude (`claude-sonnet-4-5`)
+- AI: Google Gemini (`gemini-1.5-flash`)
 - PDF parsing: `pdf-parse`
 - Charts: Recharts
 - Markdown rendering: `react-markdown`
@@ -53,7 +53,7 @@ cd server
 cp .env.example .env
 ```
 
-Then edit `server/.env` and set your Anthropic API key.
+Then edit `server/.env` and set your Gemini API key.
 
 > In production, set `VITE_API_BASE_URL` on the frontend host (Vercel) and `FRONTEND_URL` on the backend host (Render). The frontend should point to the deployed Render backend URL, and the backend should allow the deployed Vercel URL.
 

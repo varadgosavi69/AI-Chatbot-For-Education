@@ -32,18 +32,18 @@
 │                   Express Server (Port 3001)                  │
 │                   Node.js + TypeScript                       │
 │                                                              │
-│   POST /api/ask           →  Chat with Claude                │
+│   POST /api/ask           →  Chat with Gemini               │
 │   POST /api/notes/upload  →  multer + pdf-parse             │
-│   POST /api/notes/explain →  Claude (markdown explanation)   │
-│   POST /api/notes/visualize → Claude (structured JSON)      │
+│   POST /api/notes/explain →  Gemini (markdown explanation)   │
+│   POST /api/notes/visualize → Gemini (structured JSON)      │
 │   GET  /api/health        →  Liveness check                 │
 └────────────────────────┬─────────────────────────────────────┘
                          │ HTTPS
                          ▼
 ┌──────────────────────────────────────────────────────────────┐
-│               Anthropic API (Claude claude-sonnet-4-5)       │
+│               Google Gemini API (gemini-1.5-flash)          │
 │                                                              │
-│   Authenticated via ANTHROPIC_API_KEY in server/.env        │
+│   Authenticated via GEMINI_API_KEY in server/.env           │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -64,10 +64,10 @@
 
 | Route | Middleware / Logic |
 |-------|--------------------|
-| `POST /api/ask` | Validates body, builds message history, calls Claude `messages.create`, returns `{ answer }`. |
+| `POST /api/ask` | Validates body, builds message history, calls Gemini `generateContent`, returns `{ answer }`. |
 | `POST /api/notes/upload` | `multer` stores file in memory. `pdf-parse` extracts text. Returns `{ text, pages, charCount }`. Returns 422 if no text found (scanned PDF). |
-| `POST /api/notes/explain` | Sends extracted text to Claude with a "explain for a student" system prompt. Returns `{ explanation }` as markdown. |
-| `POST /api/notes/visualize` | Sends text to Claude with a strict JSON-only system prompt. Strips markdown fences, parses JSON, validates 4 required keys. Retries once if JSON is malformed. Returns structured object. |
+| `POST /api/notes/explain` | Sends extracted text to Gemini with a "explain for a student" system prompt. Returns `{ explanation }` as markdown. |
+| `POST /api/notes/visualize` | Sends text to Gemini with a strict JSON-only system prompt. Strips markdown fences, parses JSON, validates 4 required keys. Retries once if JSON is malformed. Returns structured object. |
 
 ---
 
@@ -94,7 +94,7 @@ POST /api/notes/upload
       ▼
 POST /api/notes/explain (text + subject)
       │
-  Claude: "Explain these notes simply…"
+  Gemini: "Explain these notes simply…"
       │
       ▼
 [Client renders] markdown explanation (react-markdown)
@@ -102,7 +102,7 @@ POST /api/notes/explain (text + subject)
       ▼
 POST /api/notes/visualize (text)
       │
-  Claude: "Return ONLY valid JSON with mindmap/flowchart/table/pieChart"
+  Gemini: "Return ONLY valid JSON with mindmap/flowchart/table/pieChart"
       │
   strip markdown fences → JSON.parse
       │  (retry once if invalid)
@@ -120,6 +120,6 @@ POST /api/notes/visualize (text)
 
 - **Vite proxy** — avoids CORS entirely in development; no `CORS_ORIGIN` env var needed on the frontend.
 - **In-memory PDF processing** — multer uses `memoryStorage()`, so no temp files are written to disk.
-- **JSON retry logic** — Claude occasionally wraps JSON in markdown fences; the backend strips those and retries once with a stricter prompt before failing.
+- **JSON retry logic** — Gemini occasionally wraps JSON in markdown fences; the backend strips those and retries once with a stricter prompt before failing.
 - **Client-side file validation** — Non-PDF files are caught before the network request, giving instant feedback.
 - **Per-subject localStorage** — Chat history is stored per-subject so switching subjects doesn't lose previous conversations.
