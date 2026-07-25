@@ -20,6 +20,8 @@ export interface AskError {
 // ─── Notes types ─────────────────────────────────────────────────────────────
 
 export interface UploadResponse {
+  documentId: string;
+  fileName: string;
   text: string;
   pages: number;
   charCount: number;
@@ -124,4 +126,20 @@ export async function visualizeNotes(text: string): Promise<VisualizeResponse> {
   const data = await response.json() as (VisualizeResponse & AskError);
   if (!response.ok) throw new Error(data.error || `Visualize failed (${response.status})`);
   return data;
+}
+
+export async function askPdfQuestion(request: {
+  documentId: string;
+  question: string;
+  history: HistoryMessage[];
+}): Promise<string> {
+  const response = await fetch(apiUrl("/api/notes/chat"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+
+  const data = await response.json() as (AskResponse & AskError);
+  if (!response.ok) throw new Error(data.error || `PDF chat failed (${response.status})`);
+  return data.answer;
 }

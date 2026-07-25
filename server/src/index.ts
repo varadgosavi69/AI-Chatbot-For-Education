@@ -61,6 +61,16 @@ interface AskRequestBody {
   history: HistoryMessage[];
 }
 
+interface PdfDocument {
+  id: string;
+  fileName: string;
+  text: string;
+  pages: number;
+  createdAt: string;
+}
+
+const pdfDocuments = new Map<string, PdfDocument>();
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(subject: string): string {
@@ -85,6 +95,31 @@ function extractText(response: { response?: { text?: () => string } }): string {
 function stripMarkdownFences(raw: string): string {
   // Remove ```json ... ``` or ``` ... ``` wrappers if present
   return raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+}
+
+function createDocumentId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function selectRelevantPdfContext(text: string, question: string): string {
+  const chunks = text
+    .split(/\n{2,}/)
+    .map((chunk) => chunk.replace(/\s+/g, " ").trim())
+    .filter((chunk) => chunk.length > 80);
+  const terms = question
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((term) => term.length > 2);
+
+  const scored = chunks.map((chunk, index) => {
+    const lower = chunk.toLowerCase();
+    const score = terms.reduce((total, term) => total + (lower.includes(term) ? 1 : 0), 0);
+    return { chunk, index, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score || a.index - b.index);
+  const relevant = scored.slice(0, 8).map((item) => item.chunk).join("\n\n");
+  return (relevant || text).slice(0, 14000);
 }
 
 // ─── POST /api/ask ───────────────────────────────────────────────────────────
@@ -162,7 +197,16 @@ app.post(
         return;
       }
 
-      res.json({ text, pages: parsed.total, charCount: text.length });
+      const documentId = createDocumentId();
+      pdfDocuments.set(documentId, {
+        id: documentId,
+        fileName: req.file.originalname,
+        text,
+        pages: parsed.total,
+        createdAt: new Date().toISOString(),
+      });
+
+      res.json({ documentId, fileName: req.file.originalname, text, pages: parsed.total, charCount: text.length });
     } catch (err: unknown) {
       console.error("PDF upload/parse general error:", err);
       if (err instanceof Error && err.message === "Only PDF files are accepted") {
@@ -176,6 +220,65 @@ app.post(
     }
   }
 );
+
+app.post("/api/notes/chat", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { documentId, question, history } = req.body as {
+      documentId?: string;
+      question?: string;
+      history?: HistoryMessage[];
+    };
+
+    if (!documentId || !question) {
+      res.status(400).json({ error: "documentId and question are required" });
+      return;
+    }
+
+    const document = pdfDocuments.get(documentId);
+    if (!document) {
+      res.status(404).json({ error: "PDF session not found. Please upload the PDF again." });
+      return;
+    }
+
+    const pdfContext = selectRelevantPdfContext(document.text, question);
+    const systemInstruction =
+      "You are a PDF-grounded study assistant. Answer only from the provided PDF context. " +
+      "If the answer is not present in the PDF context, say that the PDF does not contain enough information. " +
+      "Be concise, cite short phrases from the context when useful, and never invent facts outside the PDF.";
+
+    const response = await geminiModel.generateContent({
+      systemInstruction,
+      contents: [
+        ...mapHistory(history || []),
+        {
+          role: "user",
+          parts: [
+            {
+              text:
+                `PDF file: ${document.fileName}\n\nRelevant PDF context:\n${pdfContext}\n\n` +
+                `Question: ${question}`,
+            },
+          ],
+        },
+      ],
+      generationConfig: { maxOutputTokens: 1800 },
+    });
+
+    const answer = extractText(response) || "The PDF context did not produce an answer.";
+    res.json({ answer });
+  } catch (error: unknown) {
+    console.error("PDF chat error:", error);
+    if (error instanceof GoogleGenerativeAIFetchError) {
+      res.status(error.status || 500).json({ error: `Gemini API error: ${error.message}` });
+      return;
+    }
+    if (error instanceof GoogleGenerativeAIError) {
+      res.status(500).json({ error: `Gemini API error: ${error.message}` });
+      return;
+    }
+    res.status(500).json({ error: "Failed to answer from PDF." });
+  }
+});
 
 // ─── POST /api/notes/explain ─────────────────────────────────────────────────
 // Takes extracted text + subject, returns a markdown explanation from Gemini.
