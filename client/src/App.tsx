@@ -140,6 +140,7 @@ function App() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [stats, setStats] = useState<Stats>({
     questionsAsked: 0,
@@ -197,6 +198,7 @@ function App() {
     setMessages([...cleanHistory, userMessage]);
     setInput("");
     setIsLoading(true);
+    setIsStreaming(true);
     setLastQuestion(question);
 
     try {
@@ -221,6 +223,7 @@ function App() {
       ]);
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
       inputRef.current?.focus();
     }
   };
@@ -301,6 +304,7 @@ function App() {
               input={input}
               setInput={setInput}
               isLoading={isLoading}
+              isStreaming={isStreaming}
               lastQuestion={lastQuestion}
               inputRef={inputRef}
               endRef={endRef}
@@ -479,6 +483,7 @@ function ChatView({
   input,
   setInput,
   isLoading,
+  isStreaming,
   lastQuestion,
   inputRef,
   endRef,
@@ -495,6 +500,7 @@ function ChatView({
   input: string;
   setInput: (input: string) => void;
   isLoading: boolean;
+  isStreaming: boolean;
   lastQuestion: string | null;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   endRef: React.RefObject<HTMLDivElement | null>;
@@ -535,7 +541,7 @@ function ChatView({
               onSpeak={onSpeak}
             />
           ))}
-          {isLoading && <TypingSkeleton />}
+          {isLoading && <TypingSkeleton isStreaming={isStreaming} />}
           {lastQuestion && messages.some((message) => message.isError) && (
             <button onClick={() => onSubmit(lastQuestion)} className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:hover:bg-red-500/10">
               Retry last question
@@ -631,19 +637,19 @@ function IconButton({ label, icon, active, onClick }: { label: string; icon: Rea
   );
 }
 
-function TypingSkeleton() {
+function TypingSkeleton({ isStreaming = false }: { isStreaming?: boolean }) {
   return (
     <div className="flex gap-3">
       <Avatar icon={<Bot size={18} />} />
       <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/6">
         <div className="mb-3 flex items-center gap-2 text-sm text-slate-500">
-          <Loader2 className="animate-spin" size={16} />
-          Thinking
+          <Loader2 className={isStreaming ? "animate-spin" : "animate-pulse"} size={16} />
+          {isStreaming ? "Generating response" : "Preparing answer"}
         </div>
-        <div className="space-y-2">
-          <div className="h-3 w-11/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-          <div className="h-3 w-8/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-          <div className="h-3 w-10/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        <div className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-cyan-500 [animation-delay:0ms]" />
+          <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-cyan-500 [animation-delay:120ms]" />
+          <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-cyan-500 [animation-delay:240ms]" />
         </div>
       </div>
     </div>
